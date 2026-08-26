@@ -12,7 +12,12 @@ dependencies {
     jarJar("de.javagl:obj:0.4.0")
     additionalRuntimeClasspath("de.javagl:obj:0.4.0")
 
-    implementation(project.project(":common").sourceSets.getByName("main").output)
+    // MixinExtras -- used by one merged-in mixin (formerly common/, see settings.gradle.kts'
+    // comment on the common/fabric -> neoforge merge). NeoForge's own Mixin service already
+    // ships a MixinExtras version at runtime, but the compile-time annotations still need to
+    // resolve.
+    compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
+    annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
 }
 
 neoForge {
@@ -53,7 +58,7 @@ neoForge {
     }
 
     accessTransformers {
-        file("neoforge/src/main/resources/META-INF/accesstransformer.cfg")
+        file("src/main/resources/META-INF/accesstransformer.cfg")
     }
 }
 
@@ -62,31 +67,19 @@ sourceSets.main.get().resources {
 }
 
 tasks {
-    jar {
-        val main = project.project(":common").sourceSets.main.get()
-        from(main.output.classesDirs)
-        from(main.output.resourcesDir)
-    }
-
     named("compileTestJava").configure {
         enabled = false
     }
 
     val notNeoTask: (Task) -> Boolean = { !it.name.startsWith("neo") && !it.name.startsWith("compileService") }
-
-    withType<JavaCompile>().configureEach {
-        source(project(":common").sourceSets.main.get().allSource)
-    }
-
-    withType<Javadoc>().matching(notNeoTask).configureEach {
-        source(project(":common").sourceSets.main.get().allSource)
-    }
+    // Captured as a plain String, not read from `rootProject` inside the task closure below --
+    // the configuration cache can't serialize a live Gradle script object (Project) reference
+    // captured by a task's action.
+    val modVersion = rootProject.properties["mod_version"].toString()
 
     withType<ProcessResources>().matching(notNeoTask).configureEach {
-        from(project(":common").sourceSets.main.get().resources)
-
         filesMatching("META-INF/neoforge.mods.toml") {
-            expand(mapOf("version" to rootProject.properties["mod_version"]))
+            expand(mapOf("version" to modVersion))
         }
     }
 }
