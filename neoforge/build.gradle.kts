@@ -46,6 +46,9 @@ neoForge {
         }
 
         configureEach {
+            // Older moddev (2.0.28-beta) doesn't expose disableIdeRun() -- ideName = "" is the
+            // documented equivalent for this version.
+            ideName = ""
             systemProperty("forge.logging.markers", "REGISTRIES")
             logLevel = Level.DEBUG
         }
